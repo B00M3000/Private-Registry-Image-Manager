@@ -5,23 +5,24 @@ A user-friendly CLI to build and push Docker images to private registries with a
 ## Features
 
 - Auto tag generation: timestamp, git commit, git tag, semver, manual
+  - Generated tags are normalized to include a leading `v` (e.g., `v20250809-123456`, `v1.2.3`, `vabc123`); manual tags are used as-is.
 - Optional `latest` tagging
 - Docker login support
-- DNS check for registry host
+- DNS pre-check for registry host
 
-## Install (local)
-
-Use pnpm to install and build, then run via npx or link locally.
+## Installation
 
 ```bash
-pnpm install
-pnpm run build
-npx prim --help
-# or link for local global usage
-pnpm link --global
+pnpm install -g private-registry-image-manager
 ```
 
 ## Usage
+
+Help
+
+```bash
+prim
+```
 
 Initialize config (creates `.registry-deploy.yaml`):
 
@@ -77,6 +78,7 @@ Tips:
 - deploy: tag and push to the configured registry, optionally pushing `latest`.
 - status: show config and Docker environment info, optional registry DNS check.
 - test: run the built image locally with ports/env settings before deploying.
+- clean: remove local containers and images for this project, optionally for a specific tag.
 
 ### Examples
 
@@ -96,4 +98,17 @@ Run locally with ports and env vars:
 
 ```bash
 prim test -p 8080:80 -e NODE_ENV=production -n my-test
+```
+
+Cleanup all local tags/containers for this image:
+
+```bash
+prim clean
+```
+
+Cleanup a specific tag (prefixing v is optional):
+
+```bash
+prim clean -t v20250809-123456
+prim clean -t 20250809-123456
 ```

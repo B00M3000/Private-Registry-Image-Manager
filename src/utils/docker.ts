@@ -216,4 +216,43 @@ export class DockerClient {
 
     await this.executeCommand(args);
   }
+
+  async listContainersByAncestor(imageRef: string): Promise<string[]> {
+    try {
+      const result = await this.executeCommand(
+        ['ps', '-a', '--filter', `ancestor=${imageRef}`, '-q'],
+        { capture: true, silent: true }
+      );
+      return result.stdout.split('\n').map((s) => s.trim()).filter(Boolean);
+    } catch {
+      return [];
+    }
+  }
+
+  async removeContainers(containerIds: string[]): Promise<void> {
+    for (const id of containerIds) {
+      try {
+        // Force remove (stops if running)
+        await this.executeCommand(['rm', '-f', id], { silent: true });
+        Logger.debug(`Removed container: ${id}`);
+      } catch {
+        // ignore individual failures
+      }
+    }
+  }
+
+  async listTaggedImages(repository: string): Promise<string[]> {
+    try {
+      const result = await this.executeCommand(
+        ['images', repository, '--format', '{{.Repository}}:{{.Tag}}'],
+        { capture: true, silent: true }
+      );
+      return result.stdout
+        .split('\n')
+        .map((s) => s.trim())
+        .filter((line) => line && !line.endsWith(':<none>'));
+    } catch {
+      return [];
+    }
+  }
 }

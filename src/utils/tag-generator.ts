@@ -16,17 +16,24 @@ export class TagGenerator {
     switch (strategy) {
       case TagStrategy.MANUAL: {
         if (!opts.explicitTag) throw new Error('Manual tag strategy requires --tag');
+        // For manual strategy, respect the exact tag provided by the user
         return opts.explicitTag;
       }
-      case TagStrategy.GIT_COMMIT:
-        return await TagGenerator.fromGitCommit(opts.projectRoot);
-      case TagStrategy.GIT_TAG:
-        return await TagGenerator.fromGitTag(opts.projectRoot);
-      case TagStrategy.SEMVER:
-        return await TagGenerator.fromSemver(opts.projectRoot, opts.projectVersion);
+      case TagStrategy.GIT_COMMIT: {
+        const t = await TagGenerator.fromGitCommit(opts.projectRoot);
+        return TagGenerator.ensureVPrefix(t);
+      }
+      case TagStrategy.GIT_TAG: {
+        const t = await TagGenerator.fromGitTag(opts.projectRoot);
+        return TagGenerator.ensureVPrefix(t);
+      }
+      case TagStrategy.SEMVER: {
+        const t = await TagGenerator.fromSemver(opts.projectRoot, opts.projectVersion);
+        return TagGenerator.ensureVPrefix(t);
+      }
       case TagStrategy.TIMESTAMP:
       default:
-        return TagGenerator.fromTimestamp();
+        return TagGenerator.ensureVPrefix(TagGenerator.fromTimestamp());
     }
   }
 
@@ -77,5 +84,9 @@ export class TagGenerator {
     }
     Logger.warning('Semver strategy requested but no version found; falling back to timestamp');
     return TagGenerator.fromTimestamp();
+  }
+
+  private static ensureVPrefix(tag: string): string {
+    return tag.startsWith('v') ? tag : `v${tag}`;
   }
 }
