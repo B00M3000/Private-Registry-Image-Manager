@@ -4,7 +4,8 @@ import * as os from 'os';
 import * as yaml from 'js-yaml';
 
 export interface ProjectConfig {
-  name: string;
+  imageName?: string; // preferred
+  name?: string; // legacy compatibility
   version?: string;
   dockerfile?: string;
 }
@@ -52,10 +53,15 @@ export class Config {
   public readonly deployment: DeploymentConfig;
 
   constructor(data: ConfigData) {
-    this.project = data.project;
+    // Map legacy 'name' to 'imageName' if needed
+    const proj: ProjectConfig = { ...data.project };
+    if (!proj.imageName && proj.name) {
+      proj.imageName = proj.name;
+    }
+    this.project = proj;
     this.registry = data.registry;
     this.docker = {
-      localImageName: data.docker.localImageName || 'app',
+      localImageName: data.docker.localImageName || proj.imageName || 'app',
       buildArgs: data.docker.buildArgs || {},
       buildContext: data.docker.buildContext || '.'
     };
@@ -70,6 +76,8 @@ export class Config {
   static async discover(): Promise<Config> {
     const configFiles = [
       // Preferred names
+      '.registry-deploy.yaml',
+      '.registry-deploy.yml',
       'image-manager.yml',
       'image-manager.yaml',
       '.image-manager.yml',
@@ -95,8 +103,8 @@ export class Config {
       }
     }
 
-    // Check global config directory (preferred)
-    const globalConfigDirNew = path.join(os.homedir(), '.config', 'image-manager');
+  // Check global config directory (preferred)
+  const globalConfigDirNew = path.join(os.homedir(), '.config', 'registry-deploy');
     const globalConfigNew = path.join(globalConfigDirNew, 'config.yml');
     try {
       await fs.access(globalConfigNew);
@@ -115,7 +123,7 @@ export class Config {
       // Legacy global config doesn't exist
     }
 
-  throw new Error('No configuration file found. Run \'container-deploy init\' to create image-manager.yml.');
+  throw new Error('No configuration file found. Run \'container-deploy init\' to create .registry-deploy.yaml.');
   }
 
   static async fromFile(filePath: string): Promise<Config> {
@@ -140,7 +148,12 @@ export class Config {
 
   async save(filePath: string): Promise<void> {
     const data: ConfigData = {
-      project: this.project,
+      project: {
+        // Always save preferred field
+        imageName: this.project.imageName,
+        version: this.project.version,
+        dockerfile: this.project.dockerfile
+      },
       registry: this.registry,
       docker: this.docker,
       deployment: this.deployment
@@ -164,8 +177,9 @@ export class Config {
   }
 
   validate(): void {
-    if (!this.project.name?.trim()) {
-      throw new Error('Project name cannot be empty');
+    const img = this.project.imageName || this.project.name;
+    if (!img?.trim()) {
+      throw new Error('Image name cannot be empty');
     }
 
     if (!this.registry.url?.trim()) {

@@ -6,13 +6,14 @@ import { InitCommand } from './commands/init';
 import { BuildCommand } from './commands/build';
 import { DeployCommand } from './commands/deploy';
 import { StatusCommand } from './commands/status';
+import { TestCommand } from './commands/test';
 import { Logger } from './utils/logger';
 import { Config } from './config/config';
 
 const program = new Command();
 
 program
-  .name('container-deploy')
+  .name('prim')
   .description('A generalized container deployment CLI tool')
   .version('1.0.0')
   .option('-v, --verbose', 'Verbose output')
@@ -25,8 +26,8 @@ program
 // Init command
 program
   .command('init')
-  .description('Initialize image manager configuration for a new project')
-  .option('-o, --output <file>', 'Output file for configuration', 'image-manager.yml')
+  .description('Initialize registry deploy configuration for a new project')
+  .option('-o, --output <file>', 'Output file for configuration', '.registry-deploy.yaml')
   .option('--defaults', 'Skip interactive prompts and use defaults')
   .option('--force', 'Force overwrite existing configuration')
   .action(async (options) => {
@@ -96,6 +97,27 @@ program
     }
   });
 
+// Test command
+program
+  .command('test')
+  .description('Run the built image locally for testing')
+  .option('-t, --tag <tag>', 'Tag to test (defaults to generated)')
+  .option('-p, --port <port>', 'Port mapping (HOST:CONTAINER)', collectBuildArgs, [])
+  .option('-e, --env <env>', 'Env var (KEY=VALUE)', collectBuildArgs, [])
+  .option('-n, --name <name>', 'Container name')
+  .option('--no-detach', 'Run in foreground')
+  .option('--no-rm', 'Do not auto-remove container on exit')
+  .action(async (options) => {
+    try {
+      const config = await loadConfig(program.opts().config);
+      const command = new TestCommand(options, config);
+      await command.run();
+    } catch (error) {
+      Logger.error(`Test failed: ${error instanceof Error ? error.message : error}`);
+      process.exit(1);
+    }
+  });
+
 // Helper functions
 function collectBuildArgs(value: string, previous: string[]): string[] {
   return previous.concat([value]);
@@ -106,7 +128,7 @@ async function loadConfig(configPath?: string): Promise<Config> {
     return configPath ? await Config.fromFile(configPath) : await Config.discover();
   } catch (error) {
     Logger.error(error instanceof Error ? error.message : String(error));
-  Logger.info('Run \'container-deploy init\' to create image-manager.yml');
+  Logger.info('Run \'prim init\' to create .registry-deploy.yaml');
     process.exit(1);
   }
 }

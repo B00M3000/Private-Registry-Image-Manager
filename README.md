@@ -1,4 +1,8 @@
-# Image Manager CLI
+# Image Manager CLI (prim)
+
+A user-friendly CLI to build and push Docker images to private registries with automatic tag generation and optional `latest` tagging.
+
+## Features
 
 - Auto tag generation: timestamp, git commit, git tag, semver, manual
 - Optional `latest` tagging
@@ -12,34 +16,34 @@ Use pnpm to install and build, then run via npx or link locally.
 ```bash
 pnpm install
 pnpm run build
-npx container-deploy --help
+npx prim --help
 # or link for local global usage
-## Usage
+pnpm link --global
 ```
 
 ## Usage
 
-Initialize config (creates `image-manager.yml`):
+Initialize config (creates `.registry-deploy.yaml`):
 
 ```bash
-container-deploy init
-Build:
-
-Build:
-
-```bash
-container-deploy build
-```
-Deploy:
-Deploy:
-
-```bash
-container-deploy deploy
+prim init
 ```
 
-## Configuration (image-manager.yml)
+Build image:
 
-By default, `container-deploy init` creates `image-manager.yml` in your project. Example:
+```bash
+prim build
+```
+
+Deploy image:
+
+```bash
+prim deploy
+```
+
+## Configuration (.registry-deploy.yaml)
+
+By default, `prim init` creates `.registry-deploy.yaml` in your project. Example:
 
 ```yaml
 project:
@@ -57,7 +61,7 @@ docker:
 deployment:
   tagStrategy: git_commit     # timestamp | git_commit | git_tag | manual | semver
   pushLatest: true            # also push :latest alongside the generated tag
-  dnsCheck: true              # verify registry DNS before pushing
+  dnsCheck: true              # verify registry hostname resolves before pushing (safety check)
   autoCleanup: false          # remove local images after deploy
 ```
 
@@ -65,16 +69,31 @@ Tips:
 - Set credentials via env vars if not in config: `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
 - Override the tag strategy at runtime with `--tag` to set a manual tag.
 - Use `--no-latest` on deploy to skip pushing the `latest` tag.
-## Examples
+
+## Commands
+
+- init: create a new config file interactively or with defaults.
+- build: build the Docker image using your config and generated tag.
+- deploy: tag and push to the configured registry, optionally pushing `latest`.
+- status: show config and Docker environment info, optional registry DNS check.
+- test: run the built image locally with ports/env settings before deploying.
+
+### Examples
 
 Build with custom build args and no cache:
 
 ```bash
-container-deploy build --build-arg COMMIT_SHA=$(git rev-parse --short HEAD) --no-cache
+prim build --build-arg COMMIT_SHA=$(git rev-parse --short HEAD) --no-cache
 ```
 
 Deploy skipping build and without pushing latest:
 
 ```bash
-container-deploy deploy --skip-build --no-latest
+prim deploy --skip-build --no-latest
+```
+
+Run locally with ports and env vars:
+
+```bash
+prim test -p 8080:80 -e NODE_ENV=production -n my-test
 ```

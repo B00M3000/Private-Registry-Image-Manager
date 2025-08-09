@@ -23,7 +23,8 @@ export class StatusCommand {
     }
 
   Logger.header('Config');
-  Logger.step(`Project: ${this.config.project.name}`);
+  const img = this.config.project.imageName || this.config.project.name;
+  Logger.step(`Image: ${img}`);
     Logger.step(`Registry: ${this.config.registry.url}/${this.config.registry.repository}`);
     Logger.step(`Tag strategy: ${this.config.deployment.tagStrategy}`);
 

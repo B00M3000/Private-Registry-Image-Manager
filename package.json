@@ -4,8 +4,9 @@
   "description": "A generalized image manager CLI tool for private registries",
   "main": "dist/cli.js",
   "bin": {
-    "private-registry-image-manager": "dist/cli.js",
-    "container-deploy": "dist/cli.js"
+  "private-registry-image-manager": "dist/cli.js",
+  "container-deploy": "dist/cli.js",
+  "prim": "dist/cli.js"
   },
   "scripts": {
   "build": "tsc",

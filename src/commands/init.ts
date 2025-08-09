@@ -51,21 +51,21 @@ export class InitCommand {
   private async createDefaultConfig(): Promise<Config> {
     Logger.info('Creating configuration with default values');
 
-    const currentDir = process.cwd();
-    const projectName = path.basename(currentDir);
+  const projectName = await this.getDefaultImageName();
 
+    const imageName = this.sanitizeImageName(projectName);
     const configData: ConfigData = {
       project: {
-        name: projectName,
+        imageName,
         version: undefined,
         dockerfile: 'Dockerfile'
       },
       registry: {
         url: 'registry.example.com',
-        repository: projectName
+        repository: imageName
       },
       docker: {
-        localImageName: projectName,
+        localImageName: imageName,
         buildArgs: {},
         buildContext: '.'
       },
@@ -81,14 +81,13 @@ export class InitCommand {
   }
 
   private async createInteractiveConfig(): Promise<Config> {
-    const currentDir = process.cwd();
-    const projectName = path.basename(currentDir);
+  const projectName = await this.getDefaultImageName();
 
     const answers = await inquirer.prompt<{
-      projectName: string;
+      imageName: string;
+      namespace?: string;
       dockerfile: string | undefined;
       registryUrl: string;
-      repository: string;
       username?: string;
       password?: string;
       tagStrategy: TagStrategy;
@@ -96,11 +95,11 @@ export class InitCommand {
       dnsCheck: boolean;
       autoCleanup: boolean;
     }>([
-      { type: 'input', name: 'projectName', message: 'Project name', default: projectName },
-      { type: 'input', name: 'dockerfile', message: 'Dockerfile path (optional)', default: 'Dockerfile' },
-      { type: 'input', name: 'registryUrl', message: 'Registry URL (e.g., registry.example.com)', default: 'registry.example.com' },
-      { type: 'input', name: 'repository', message: 'Registry repository (e.g., my/app)', default: projectName },
-      { type: 'input', name: 'username', message: 'Registry username (leave blank to use env)', default: '' },
+  { type: 'input', name: 'imageName', message: 'Image name', default: this.sanitizeImageName(projectName) },
+      { type: 'input', name: 'namespace', message: 'Namespace (optional)', default: '' },
+      { type: 'input', name: 'dockerfile', message: 'Dockerfile path', default: 'Dockerfile' },
+      { type: 'input', name: 'registryUrl', message: 'Registry', default: 'registry.example.com' },
+      { type: 'input', name: 'username', message: 'Registry username (leave blank to use env)' },
       { type: 'password', name: 'password', message: 'Registry password (leave blank to use env)', mask: '*' },
       { type: 'list', name: 'tagStrategy', message: 'Tag strategy', choices: [
         { name: 'Git commit', value: TagStrategy.GIT_COMMIT },
@@ -114,19 +113,23 @@ export class InitCommand {
       { type: 'confirm', name: 'autoCleanup', message: 'Clean up local images after deploy?', default: false },
     ]);
 
+  const img = this.sanitizeImageName(answers.imageName);
+  const ns = (answers.namespace || '').trim().replace(/^\/+|\/+$/g, '');
+  const repo = ns ? `${ns}/${img}` : img;
+
     const configData: ConfigData = {
       project: {
-        name: answers.projectName,
+        imageName: img,
         dockerfile: answers.dockerfile || undefined,
       },
       registry: {
         url: answers.registryUrl,
-        repository: answers.repository,
+        repository: repo,
         username: answers.username || undefined,
         password: answers.password || undefined,
       },
       docker: {
-        localImageName: answers.projectName,
+        localImageName: img,
         buildArgs: {},
         buildContext: '.',
       },
@@ -141,10 +144,39 @@ export class InitCommand {
     return new Config(configData);
   }
 
+  private sanitizeImageName(name: string): string {
+    return name
+      .toLowerCase()
+      .replace(/[^a-z0-9._-]/g, '-')
+      .replace(/^-+|-+$/g, '');
+  }
+
   private showNextSteps(): void {
     Logger.header('Next steps');
-    Logger.step('Edit container-deploy.yml if needed');
-    Logger.step('Run: container-deploy build');
-    Logger.step('Run: container-deploy deploy');
+    Logger.step('Edit .registry-deploy.yaml if needed');
+    Logger.step('Run: prim build');
+    Logger.step('Run: prim deploy');
+  }
+
+  private async getDefaultImageName(): Promise<string> {
+    const currentDir = process.cwd();
+    const pkgPath = path.join(currentDir, 'package.json');
+    try {
+      const content = await fs.readFile(pkgPath, 'utf-8');
+      const pkg = JSON.parse(content) as { name?: string };
+      if (pkg.name) {
+        // Normalize package name to an image-friendly name
+        // Handle scoped names like @scope/name
+        const base = pkg.name.includes('/') ? pkg.name.split('/')[1] : pkg.name;
+        const normalized = base
+          .toLowerCase()
+          .replace(/[^a-z0-9._-]/g, '-')
+          .replace(/^-+|-+$/g, '');
+        if (normalized) return normalized;
+      }
+    } catch {
+      // ignore and fallback
+    }
+    return path.basename(currentDir).toLowerCase().replace(/[^a-z0-9._-]/g, '-');
   }
 }

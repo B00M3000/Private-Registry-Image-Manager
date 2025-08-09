@@ -189,4 +189,31 @@ export class DockerClient {
       });
     });
   }
+
+  async runContainer(
+    image: string,
+    options: {
+      name?: string;
+      ports?: string[]; // host:container
+      env?: Record<string, string>;
+      detach?: boolean;
+      rm?: boolean;
+      cmd?: string[];
+    } = {}
+  ): Promise<void> {
+    const args: string[] = ['run'];
+    if (options.rm !== false) args.push('--rm');
+    if (options.detach !== false) args.push('-d');
+    if (options.name) args.push('--name', options.name);
+    for (const p of options.ports || []) {
+      args.push('-p', p);
+    }
+    for (const [k, v] of Object.entries(options.env || {})) {
+      args.push('-e', `${k}=${v}`);
+    }
+    args.push(image);
+    if (options.cmd && options.cmd.length) args.push(...options.cmd);
+
+    await this.executeCommand(args);
+  }
 }

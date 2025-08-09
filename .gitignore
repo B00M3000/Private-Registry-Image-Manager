@@ -31,3 +31,6 @@ coverage/
 # Misc
 *.local
 *.lock
+
+# Registry deploy config (contains credentials)
+.registry-deploy.yaml
