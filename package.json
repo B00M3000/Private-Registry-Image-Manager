@@ -31,12 +31,8 @@
   "license": "MIT",
   "repository": {
     "type": "git",
-    "url": "https://github.com/username/container-deploy-cli.git"
+    "url": "https://github.com/B00M3000/Private-Registry-Image-Manager.git"
   },
-  "bugs": {
-    "url": "https://github.com/username/container-deploy-cli/issues"
-  },
-  "homepage": "https://github.com/username/container-deploy-cli#readme",
   "packageManager": "pnpm@9.0.0",
   "files": [
     "dist/**/*",
