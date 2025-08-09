@@ -1,6 +1,6 @@
 {
   "name": "private-registry-image-manager",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "A generalized image manager CLI tool for private registries",
   "main": "dist/cli.js",
   "bin": {
