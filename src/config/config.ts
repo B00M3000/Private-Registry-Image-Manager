@@ -95,15 +95,24 @@ export class Config {
       }
     }
 
-    // Check global config directory
-    const globalConfigDir = path.join(os.homedir(), '.config', 'container-deploy');
-    const globalConfig = path.join(globalConfigDir, 'config.yml');
-
+    // Check global config directory (preferred)
+    const globalConfigDirNew = path.join(os.homedir(), '.config', 'image-manager');
+    const globalConfigNew = path.join(globalConfigDirNew, 'config.yml');
     try {
-      await fs.access(globalConfig);
-      return await Config.fromFile(globalConfig);
+      await fs.access(globalConfigNew);
+      return await Config.fromFile(globalConfigNew);
     } catch {
-      // Global config doesn't exist
+      // New global config doesn't exist
+    }
+
+    // Fallback to legacy global config directory
+    const globalConfigDirLegacy = path.join(os.homedir(), '.config', 'container-deploy');
+    const globalConfigLegacy = path.join(globalConfigDirLegacy, 'config.yml');
+    try {
+      await fs.access(globalConfigLegacy);
+      return await Config.fromFile(globalConfigLegacy);
+    } catch {
+      // Legacy global config doesn't exist
     }
 
   throw new Error('No configuration file found. Run \'container-deploy init\' to create image-manager.yml.');

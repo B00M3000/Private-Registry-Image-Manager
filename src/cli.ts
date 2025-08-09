@@ -25,8 +25,8 @@ program
 // Init command
 program
   .command('init')
-  .description('Initialize configuration for a new project')
-  .option('-o, --output <file>', 'Output file for configuration', 'container-deploy.yml')
+  .description('Initialize image manager configuration for a new project')
+  .option('-o, --output <file>', 'Output file for configuration', 'image-manager.yml')
   .option('--defaults', 'Skip interactive prompts and use defaults')
   .option('--force', 'Force overwrite existing configuration')
   .action(async (options) => {
@@ -106,7 +106,7 @@ async function loadConfig(configPath?: string): Promise<Config> {
     return configPath ? await Config.fromFile(configPath) : await Config.discover();
   } catch (error) {
     Logger.error(error instanceof Error ? error.message : String(error));
-    Logger.info('Run \'container-deploy init\' to create a configuration file');
+  Logger.info('Run \'container-deploy init\' to create image-manager.yml');
     process.exit(1);
   }
 }

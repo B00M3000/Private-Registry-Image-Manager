@@ -1,86 +1,80 @@
-# Container Deploy CLI
+# Image Manager CLI
 
-A generalized Node.js CLI to build and push Docker images to private registries with auto tag generation and optional `latest` tagging.
-
-## Features
-
-- Config-driven build and deploy
 - Auto tag generation: timestamp, git commit, git tag, semver, manual
 - Optional `latest` tagging
 - Docker login support
 - DNS check for registry host
 
-## Install
+## Install (local)
 
-With pnpm:
+Use pnpm to install and build, then run via npx or link locally.
 
 ```bash
 pnpm install
 pnpm run build
-pnpm link --global
-# then use `container-deploy` globally
+npx container-deploy --help
+# or link for local global usage
+## Usage
 ```
 
 ## Usage
 
-Initialize config:
+Initialize config (creates `image-manager.yml`):
 
 ```bash
 container-deploy init
-```
+Build:
 
 Build:
 
 ```bash
 container-deploy build
 ```
-
+Deploy:
 Deploy:
 
 ```bash
 container-deploy deploy
 ```
 
-## Config
+## Configuration (image-manager.yml)
 
-Creates a `container-deploy.yml` by default with the following shape:
+By default, `container-deploy init` creates `image-manager.yml` in your project. Example:
 
 ```yaml
 project:
-  name: my-app
-  version: 1.0.0
+  name: my-app           # Display/name for the image
   dockerfile: ./Dockerfile
 registry:
-  url: registry.example.com
-  repository: my/app
+  url: registry.example.com   # e.g., ghcr.io, registry.hub.docker.com (with org/repo below)
+  repository: my/app          # repository path in the registry
   username: "${REGISTRY_USERNAME}"
   password: "${REGISTRY_PASSWORD}"
 docker:
-  localImageName: my-app
+  localImageName: my-app      # local image name used during build
   buildArgs: {}
   buildContext: .
 deployment:
-  tagStrategy: git_commit # timestamp|git_commit|git_tag|manual|semver
-  autoCleanup: false
-  pushLatest: true
-  dnsCheck: true
+  tagStrategy: git_commit     # timestamp | git_commit | git_tag | manual | semver
+  pushLatest: true            # also push :latest alongside the generated tag
+  dnsCheck: true              # verify registry DNS before pushing
+  autoCleanup: false          # remove local images after deploy
 ```
 
-Set credentials via env vars if not in config: `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
+Tips:
+- Set credentials via env vars if not in config: `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
+- Override the tag strategy at runtime with `--tag` to set a manual tag.
+- Use `--no-latest` on deploy to skip pushing the `latest` tag.
+## Examples
 
-## Release and publish to npm
-
-This repo includes a GitHub Actions workflow that publishes on tag pushes matching `v*`.
-
-Steps:
-
-1. Add `NPM_TOKEN` secret in your GitHub repository settings.
-2. Bump version in `package.json`.
-3. Create and push a tag:
+Build with custom build args and no cache:
 
 ```bash
-git tag v1.0.0
-git push origin v1.0.0
+container-deploy build --build-arg COMMIT_SHA=$(git rev-parse --short HEAD) --no-cache
 ```
 
-The workflow will build with pnpm and publish to npm.
+Deploy skipping build and without pushing latest:
+
+```bash
+container-deploy deploy --skip-build --no-latest
+```
