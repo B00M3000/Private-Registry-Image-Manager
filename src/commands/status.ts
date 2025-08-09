@@ -2,6 +2,8 @@ import * as dns from 'dns';
 import { Config } from '../config/config';
 import { Logger } from '../utils/logger';
 import { DockerClient } from '../utils/docker';
+import { ImageTracker } from '../utils/image-tracker';
+import { CleanPreferencesManager } from '../utils/clean-preferences';
 
 interface StatusOptions {
   verbose?: boolean;
@@ -27,6 +29,46 @@ export class StatusCommand {
   Logger.step(`Image: ${img}`);
     Logger.step(`Registry: ${this.config.registry.url}/${this.config.registry.repository}`);
     Logger.step(`Tag strategy: ${this.config.deployment.tagStrategy}`);
+
+    // Show tracked images
+    Logger.header('Tracked Images');
+    try {
+      const storageInfo = await ImageTracker.getStorageInfo();
+      Logger.info(`Storage: ${storageInfo.dir}`);
+      Logger.info(`Total tracked images: ${storageInfo.imageCount}`);
+
+      if (img) {
+        const trackedImages = await ImageTracker.getTrackedImages(process.cwd(), img);
+        if (trackedImages.length > 0) {
+          Logger.info(`Local project images: ${trackedImages.length}`);
+          if (this.options.verbose) {
+            for (const tracked of trackedImages.slice(0, 10)) {
+              const builtAt = new Date(tracked.builtAt).toLocaleString();
+              const sizeInfo = tracked.size ? ` (${tracked.size})` : '';
+              Logger.step(`  ${tracked.tag} - built ${builtAt}${sizeInfo}`);
+            }
+            if (trackedImages.length > 10) {
+              Logger.step(`  ... and ${trackedImages.length - 10} more`);
+            }
+          }
+        } else {
+          Logger.info('No tracked images for this project');
+        }
+
+        // Show clean preferences
+        const excludedTags = await CleanPreferencesManager.getExcludedTags(process.cwd(), img);
+        if (excludedTags.length > 0) {
+          Logger.info(`Clean preferences: ${excludedTags.length} images excluded from auto-cleanup`);
+          if (this.options.verbose) {
+            for (const tag of excludedTags) {
+              Logger.step(`  Excluded: ${tag}`);
+            }
+          }
+        }
+      }
+    } catch (error) {
+      Logger.warning(`Failed to load tracked images: ${error instanceof Error ? error.message : error}`);
+    }
 
     if (this.options.checkRegistry) {
       const host = this.config.getRegistryHost();

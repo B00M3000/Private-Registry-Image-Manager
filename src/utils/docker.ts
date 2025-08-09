@@ -127,6 +127,35 @@ export class DockerClient {
     }
   }
 
+  async getImageSize(imageName: string): Promise<string | undefined> {
+    try {
+      const result = await this.executeCommand([
+        'images',
+        imageName,
+        '--format',
+        '{{.Size}}'
+      ], { capture: true, silent: true });
+
+      return result.stdout.trim() || undefined;
+    } catch {
+      return undefined;
+    }
+  }
+
+  async imageExists(imageName: string): Promise<boolean> {
+    try {
+      const result = await this.executeCommand([
+        'images',
+        '-q',
+        imageName
+      ], { capture: true, silent: true });
+
+      return result.stdout.trim().length > 0;
+    } catch {
+      return false;
+    }
+  }
+
   async getVersion(): Promise<string> {
     try {
       const result = await this.executeCommand([
@@ -251,6 +280,44 @@ export class DockerClient {
         .split('\n')
         .map((s) => s.trim())
         .filter((line) => line && !line.endsWith(':<none>'));
+    } catch {
+      return [];
+    }
+  }
+
+  async getAllProjectImages(localRepo: string, registryRepo: string): Promise<Array<{ image: string; tag: string; size: string; created: string }>> {
+    try {
+      const repos = [localRepo, registryRepo];
+      const allImages: Array<{ image: string; tag: string; size: string; created: string }> = [];
+
+      for (const repo of repos) {
+        const result = await this.executeCommand([
+          'images',
+          repo,
+          '--format',
+          '{{.Repository}}:{{.Tag}}\t{{.Size}}\t{{.CreatedSince}}'
+        ], { capture: true, silent: true });
+
+        const images = result.stdout
+          .split('\n')
+          .map(line => line.trim())
+          .filter(line => line && !line.includes(':<none>'))
+          .map(line => {
+            const parts = line.split('\t');
+            const [repoTag] = parts;
+            const [repository, tag] = repoTag.split(':');
+            return {
+              image: repoTag,
+              tag: tag || 'latest',
+              size: parts[1] || 'unknown',
+              created: parts[2] || 'unknown'
+            };
+          });
+
+        allImages.push(...images);
+      }
+
+      return allImages;
     } catch {
       return [];
     }

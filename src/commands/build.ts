@@ -2,6 +2,7 @@ import { Config } from '../config/config';
 import { Logger } from '../utils/logger';
 import { DockerClient } from '../utils/docker';
 import { TagGenerator } from '../utils/tag-generator';
+import { ImageTracker } from '../utils/image-tracker';
 
 interface BuildOptions {
   tag?: string;
@@ -33,6 +34,26 @@ export class BuildCommand {
       { ...this.config.docker.buildArgs, ...buildArgs },
       !!this.options.noCache
     );
+
+    // Track the built image
+    try {
+      const size = await docker.getImageSize(localImage);
+      await ImageTracker.trackImage({
+        imageName: this.config.docker.localImageName,
+        tag,
+        fullImageName: localImage,
+        projectPath: process.cwd(),
+        builtAt: new Date().toISOString(),
+        size,
+        dockerfile: this.config.project.dockerfile,
+        buildArgs: { ...this.config.docker.buildArgs, ...buildArgs }
+      });
+    } catch (error) {
+      Logger.debug(`Failed to track image: ${error instanceof Error ? error.message : error}`);
+    }
+
+    // Cleanup old tracked images
+    await ImageTracker.cleanupStaleImages();
 
     Logger.success(`Build complete -> ${localImage}`);
   }

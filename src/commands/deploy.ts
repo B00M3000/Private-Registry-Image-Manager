@@ -4,6 +4,7 @@ import { Config } from '../config/config';
 import { Logger } from '../utils/logger';
 import { DockerClient } from '../utils/docker';
 import { TagGenerator } from '../utils/tag-generator';
+import { ImageTracker } from '../utils/image-tracker';
 
 interface DeployOptions {
   tag?: string;
@@ -50,13 +51,62 @@ export class DeployCommand {
     }
 
     // Resolve tag
-    const tag = this.options.tag || await TagGenerator.generate(this.config.deployment.tagStrategy, {
-      projectRoot: process.cwd(),
-      projectVersion: this.config.project.version
-    });
+    let tag = this.options.tag;
 
+    if (!tag && !this.options.skipBuild) {
+      // Check for tracked images if not skipping build and no tag specified
+      const trackedImages = await ImageTracker.getTrackedImages(
+        process.cwd(),
+        this.config.docker.localImageName
+      );
+
+      if (trackedImages.length > 0 && !this.options.force) {
+        Logger.info('Found previously built images:');
+        const choices = trackedImages.slice(0, 5).map((img) => ({
+          name: `${img.tag} (built ${new Date(img.builtAt).toLocaleString()}${img.size ? `, ${img.size}` : ''})`,
+          value: img.tag,
+          short: img.tag
+        }));
+
+        choices.push({
+          name: 'Build new image with generated tag',
+          value: '__build_new__',
+          short: 'Build new'
+        });
+
+        const { selectedTag } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'selectedTag',
+            message: 'Which image would you like to deploy?',
+            choices
+          }
+        ]);
+
+        if (selectedTag === '__build_new__') {
+          tag = await TagGenerator.generate(this.config.deployment.tagStrategy, {
+            projectRoot: process.cwd(),
+            projectVersion: this.config.project.version
+          });
+        } else {
+          tag = selectedTag;
+        }
+      } else {
+        tag = await TagGenerator.generate(this.config.deployment.tagStrategy, {
+          projectRoot: process.cwd(),
+          projectVersion: this.config.project.version
+        });
+      }
+    } else if (!tag) {
+      tag = await TagGenerator.generate(this.config.deployment.tagStrategy, {
+        projectRoot: process.cwd(),
+        projectVersion: this.config.project.version
+      });
+    }
+
+    // At this point tag is guaranteed to be defined
     const localImage = `${this.config.docker.localImageName}:${tag}`;
-    const registryImage = this.config.getFullImageName(tag);
+    const registryImage = this.config.getFullImageName(tag!);
 
     // Login
     if (!this.options.skipAuth) {
@@ -77,6 +127,23 @@ export class DeployCommand {
         this.config.docker.buildArgs,
         false
       );
+
+      // Track the newly built image
+      try {
+        const size = await docker.getImageSize(localImage);
+        await ImageTracker.trackImage({
+          imageName: this.config.docker.localImageName,
+          tag: tag!,
+          fullImageName: localImage,
+          projectPath: process.cwd(),
+          builtAt: new Date().toISOString(),
+          size,
+          dockerfile: this.config.project.dockerfile,
+          buildArgs: this.config.docker.buildArgs
+        });
+      } catch (error) {
+        Logger.debug(`Failed to track image: ${error instanceof Error ? error.message : error}`);
+      }
     } else {
       Logger.info('Skipping build step');
     }
@@ -97,6 +164,9 @@ export class DeployCommand {
       await docker.removeImage(localImage);
       await docker.removeImage(registryImage);
       if (pushLatest) await docker.removeImage(this.config.getFullImageName('latest'));
+
+      // Remove from tracking if cleaned up
+      await ImageTracker.removeTrackedImage(process.cwd(), this.config.docker.localImageName, tag!);
     }
 
     Logger.success(`Deployment complete -> ${registryImage}`);

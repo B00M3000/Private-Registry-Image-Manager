@@ -2,6 +2,8 @@ import { Config } from '../config/config';
 import { Logger } from '../utils/logger';
 import { DockerClient } from '../utils/docker';
 import { TagGenerator } from '../utils/tag-generator';
+import { ImageTracker } from '../utils/image-tracker';
+import inquirer from 'inquirer';
 
 interface TestOptions {
   tag?: string;
@@ -19,19 +21,64 @@ export class TestCommand {
     const docker = new DockerClient();
     await docker.checkAvailability();
 
-    const tag = this.options.tag || await TagGenerator.generate(this.config.deployment.tagStrategy, {
-      projectRoot: process.cwd(),
-      projectVersion: this.config.project.version
-    });
+    let tag = this.options.tag;
+    let localImage: string;
 
-    const localImage = `${this.config.docker.localImageName}:${tag}`;
+    if (!tag) {
+      // Check for tracked images
+      const trackedImages = await ImageTracker.getTrackedImages(
+        process.cwd(),
+        this.config.docker.localImageName
+      );
+
+      if (trackedImages.length > 0) {
+        Logger.info('Found previously built images:');
+        const choices = trackedImages.slice(0, 5).map((img, index) => ({
+          name: `${img.tag} (built ${new Date(img.builtAt).toLocaleString()}${img.size ? `, ${img.size}` : ''})`,
+          value: img.tag,
+          short: img.tag
+        }));
+
+        choices.push({
+          name: 'Build new image with generated tag',
+          value: '__build_new__',
+          short: 'Build new'
+        });
+
+        const { selectedTag } = await inquirer.prompt([
+          {
+            type: 'list',
+            name: 'selectedTag',
+            message: 'Which image would you like to test?',
+            choices
+          }
+        ]);
+
+        if (selectedTag === '__build_new__') {
+          tag = await TagGenerator.generate(this.config.deployment.tagStrategy, {
+            projectRoot: process.cwd(),
+            projectVersion: this.config.project.version
+          });
+        } else {
+          tag = selectedTag;
+        }
+      } else {
+        tag = await TagGenerator.generate(this.config.deployment.tagStrategy, {
+          projectRoot: process.cwd(),
+          projectVersion: this.config.project.version
+        });
+      }
+    }
+
+    // At this point tag is guaranteed to be defined
+    localImage = `${this.config.docker.localImageName}:${tag}`;
 
     Logger.header('Local Test Run');
     Logger.step(`Image: ${localImage}`);
 
     // Ensure image is present; if not, build it
-    const info = await docker.getImageInfo(localImage);
-    if (!info || !info.trim()) {
+    const imageExists = await docker.imageExists(localImage);
+    if (!imageExists) {
       Logger.info('Image not found locally; building first...');
       await docker.buildImage(
         this.config.docker.buildContext,
@@ -40,6 +87,23 @@ export class TestCommand {
         this.config.docker.buildArgs,
         false
       );
+
+      // Track the newly built image
+      try {
+        const size = await docker.getImageSize(localImage);
+        await ImageTracker.trackImage({
+          imageName: this.config.docker.localImageName,
+          tag: tag!, // tag is guaranteed to be defined at this point
+          fullImageName: localImage,
+          projectPath: process.cwd(),
+          builtAt: new Date().toISOString(),
+          size,
+          dockerfile: this.config.project.dockerfile,
+          buildArgs: this.config.docker.buildArgs
+        });
+      } catch (error) {
+        Logger.debug(`Failed to track image: ${error instanceof Error ? error.message : error}`);
+      }
     }
 
     const containerName = this.options.name || `im-test-${Date.now()}`;

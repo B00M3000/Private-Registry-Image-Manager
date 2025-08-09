@@ -154,6 +154,8 @@ export class InitCommand {
   private showNextSteps(): void {
     Logger.header('Next steps');
     Logger.step('Edit .registry-deploy.yaml if needed');
+    Logger.warning('SECURITY NOTICE: If your .registry-deploy.yaml contains credentials,');
+    Logger.warning('ensure it is added to .gitignore to prevent accidentally committing secrets.');
     Logger.step('Run: prim build');
     Logger.step('Run: prim deploy');
   }

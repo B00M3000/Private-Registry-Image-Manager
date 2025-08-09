@@ -23,6 +23,8 @@ function printCondensedHelp(): void {
   lines.push(h('\nPrivate Registry Image Manager (prim)'));
   lines.push(chalk.gray('Show this menu via: `prim`, `prim --help`, or `prim help`.'));
   lines.push('');
+  lines.push(chalk.blue('📖 README: https://github.com/B00M3000/Private-Registry-Image-Manager#readme'));
+  lines.push('');
   lines.push(chalk.bold('Usage: ') + 'prim [global-options] <command> [command-options]');
   lines.push('');
   lines.push(chalk.bold('Global options:'));
@@ -36,7 +38,7 @@ function printCondensedHelp(): void {
     { desc: 'Deploy to registry', cmd: 'deploy', opts: '[--tag|-t] [--skip-build] [--no-latest] [--force|-f]' },
     { desc: 'Show config/env', cmd: 'status', opts: '[--check-registry] [--verbose|-v]' },
     { desc: 'Run locally', cmd: 'test', opts: '[--tag|-t] [-p HOST:PORT] [-e KEY=VALUE] [--no-detach]' },
-    { desc: 'Remove local uses', cmd: 'clean', opts: '[--tag|-t] [--yes|-y]' },
+    { desc: 'Interactive cleanup', cmd: 'clean', opts: '[--tag|-t] [--yes|-y]' },
     { desc: 'Show help', cmd: 'help', opts: '[-x|--expanded]' },
   ];
   const descW = Math.max(...items.map(i => i.desc.length)) + 2;
@@ -57,6 +59,7 @@ function printCondensedHelp(): void {
 function printExpandedHelp(): void {
   const header = chalk.bold.cyan('\nPrivate Registry Image Manager (prim)\n');
   const access = chalk.gray('Show this menu via any of: `prim`, `prim --help`, or `prim help --expanded`.');
+  const docs = chalk.blue('📖 README: https://github.com/B00M3000/Private-Registry-Image-Manager#readme\n');
 
   // Build command sections data
   const sections: Array<{ title: string; options: Array<[string, string]>; notes?: string } > = [
@@ -115,7 +118,7 @@ function printExpandedHelp(): void {
         ['-t, --tag <tag>',      'Clean a specific tag (' + chalk.green('v') + ' prefix optional). Without ' + chalk.yellow('-t') + ' cleans all tags.'],
         ['-y, --yes',            'Proceed without interactive confirmation'],
       ],
-      notes: 'Stops/removes containers that use the image, then removes the image tags (' + chalk.cyan('local') + ' and ' + chalk.cyan('registry-style refs') + ' present locally).',
+      notes: 'Interactive multi-select interface with persistent preferences. Auto-discovers all project images (tracked + Docker system). Use ' + chalk.cyan('SPACE') + ' to toggle selection.',
     },
   ];
 
@@ -127,6 +130,9 @@ function printExpandedHelp(): void {
   const lines: string[] = [];
   lines.push(header);
   lines.push(access);
+  lines.push('');
+  lines.push('');
+  lines.push(docs);
   lines.push('');
   lines.push(chalk.bold.cyan('Global flags:'));
   const globalFlags: Array<[string, string]> = [
@@ -326,8 +332,9 @@ program.addHelpText('before', (context) => {
       context.command && context.command.name && context.command.name() === 'prim') {
     const header = chalk.bold.cyan('\nPrivate Registry Image Manager (prim)\n');
     const access = chalk.gray('Show this menu via any of: `prim`, `prim --help`, or `prim help`.');
+    const docs = chalk.blue('📖 Documentation: https://github.com/B00M3000/Private-Registry-Image-Manager#readme');
     const globals = `\n${chalk.bold('Global flags:')}\n  ${chalk.yellow('-v, --verbose')}        Verbose output\n  ${chalk.yellow('-c, --config <path>')}  Use a specific configuration file (default: auto-discover)\n`;
-    return header + access + globals + '\n';
+    return header + access + '\n' + docs + globals + '\n';
   }
   return '';
 });
