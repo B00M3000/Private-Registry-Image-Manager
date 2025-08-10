@@ -16,7 +16,7 @@ interface DeployOptions {
 }
 
 export class DeployCommand {
-  constructor(private options: DeployOptions, private config: Config) {}
+  constructor(private options: DeployOptions, private config: Config) { }
 
   async run(): Promise<void> {
     const docker = new DockerClient();

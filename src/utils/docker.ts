@@ -179,6 +179,13 @@ export class DockerClient {
     } = {}
   ): Promise<{ stdout: string; stderr: string }> {
     return new Promise((resolve, reject) => {
+      // Unified debug output for all docker commands
+      const cmdPreview = args
+        .map((a) => a)
+        .join(' ');
+      const stdinNote = options.input ? ' << (stdin provided)' : '';
+      Logger.debug(`docker ${cmdPreview}${stdinNote}`);
+
       const child: ChildProcess = spawn('docker', args, {
         stdio: [
           options.input ? 'pipe' : 'inherit',

@@ -62,61 +62,61 @@ function printExpandedHelp(): void {
   const docs = chalk.blue('📖 README: https://github.com/B00M3000/Private-Registry-Image-Manager#readme\n');
 
   // Build command sections data
-  const sections: Array<{ title: string; options: Array<[string, string]>; notes?: string } > = [
+  const sections: Array<{ title: string; options: Array<[string, string]>; notes?: string }> = [
     {
       title: chalk.green('init'),
       options: [
         ['-o, --output <file>', 'Output config file (default: ' + chalk.magenta('.registry-deploy.yaml') + ')'],
-        ['    --defaults',       'Use non-interactive defaults'],
-        ['    --force',          'Overwrite existing config without prompt'],
+        ['    --defaults', 'Use non-interactive defaults'],
+        ['    --force', 'Overwrite existing config without prompt'],
       ],
     },
     {
       title: chalk.green('build'),
       options: [
-        ['-t, --tag <tag>',      'Use a specific tag (' + chalk.cyan('manual strategy') + ')'],
+        ['-t, --tag <tag>', 'Use a specific tag (' + chalk.cyan('manual strategy') + ')'],
         ['    --build-arg <KV>', 'Repeatable build arg ' + chalk.cyan('KEY=VALUE') + ' (merges with config ' + chalk.yellow('buildArgs') + ')'],
-        ['    --no-cache',       'Build without cache'],
-        ['    --verbose',        'Show detailed build output'],
+        ['    --no-cache', 'Build without cache'],
+        ['    --verbose', 'Show detailed build output'],
       ],
       notes: 'If no tag is provided, a tag is generated per ' + chalk.yellow('deployment.tagStrategy') + '. Auto tags are prefixed with ' + chalk.green('v') + ' if missing.',
     },
     {
       title: chalk.green('deploy'),
       options: [
-        ['-t, --tag <tag>',      'Use a specific tag (overrides strategy)'],
-        ['    --skip-build',     'Skip building and use existing local image'],
+        ['-t, --tag <tag>', 'Use a specific tag (overrides strategy)'],
+        ['    --skip-build', 'Skip building and use existing local image'],
         ['    --skip-dns-check', 'Skip DNS check (overrides config)'],
-        ['-f, --force',          'Skip confirmation prompts'],
-        ['    --no-latest',      'Do not push ' + chalk.cyan(':latest') + ' tag'],
-        ['    --skip-auth',      'Do not login; assume already logged in'],
+        ['-f, --force', 'Skip confirmation prompts'],
+        ['    --no-latest', 'Do not push ' + chalk.cyan(':latest') + ' tag'],
+        ['    --skip-auth', 'Do not login; assume already logged in'],
       ],
       notes: 'Credentials can be provided via config or env ' + chalk.yellow('REGISTRY_USERNAME') + '/' + chalk.yellow('REGISTRY_PASSWORD') + '.',
     },
     {
       title: chalk.green('status'),
       options: [
-        ['-v, --verbose',        'Show detailed information'],
+        ['-v, --verbose', 'Show detailed information'],
         ['    --check-registry', 'Check registry DNS resolution'],
       ],
     },
     {
       title: chalk.green('test'),
       options: [
-        ['-t, --tag <tag>',      'Tag to test (defaults to generated if missing locally)'],
-        ['-p, --port <map>',     'Repeatable port mapping ' + chalk.cyan('HOST:CONTAINER')],
-        ['-e, --env <KV>',       'Repeatable environment variable ' + chalk.cyan('KEY=VALUE')],
-        ['-n, --name <name>',    'Container name (default: ' + chalk.cyan('im-test-<timestamp>') + ')'],
-        ['    --no-detach',      'Run in foreground (default is ' + chalk.cyan('detached') + ')'],
-        ['    --no-rm',          'Do not auto-remove container on exit'],
+        ['-t, --tag <tag>', 'Tag to test (defaults to generated if missing locally)'],
+        ['-p, --port <map>', 'Repeatable port mapping ' + chalk.cyan('HOST:CONTAINER')],
+        ['-e, --env <KV>', 'Repeatable environment variable ' + chalk.cyan('KEY=VALUE')],
+        ['-n, --name <name>', 'Container name (default: ' + chalk.cyan('im-test-<timestamp>') + ')'],
+        ['    --no-detach', 'Run in foreground (default is ' + chalk.cyan('detached') + ')'],
+        ['    --no-rm', 'Do not auto-remove container on exit'],
       ],
       notes: 'Will build first if the ' + chalk.cyan('image:tag') + ' is not present locally.',
     },
     {
       title: chalk.green('clean'),
       options: [
-        ['-t, --tag <tag>',      'Clean a specific tag (' + chalk.green('v') + ' prefix optional). Without ' + chalk.yellow('-t') + ' cleans all tags.'],
-        ['-y, --yes',            'Proceed without interactive confirmation'],
+        ['-t, --tag <tag>', 'Clean a specific tag (' + chalk.green('v') + ' prefix optional). Without ' + chalk.yellow('-t') + ' cleans all tags.'],
+        ['-y, --yes', 'Proceed without interactive confirmation'],
       ],
       notes: 'Interactive multi-select interface with persistent preferences. Auto-discovers all project images (tracked + Docker system). Use ' + chalk.cyan('SPACE') + ' to toggle selection.',
     },
@@ -136,8 +136,8 @@ function printExpandedHelp(): void {
   lines.push('');
   lines.push(chalk.bold.cyan('Global flags:'));
   const globalFlags: Array<[string, string]> = [
-    ['-v, --verbose',        'Verbose output'],
-    ['-i, -c, --config <path>','Use a specific configuration file (default: auto-discover)'],
+    ['-v, --verbose', 'Verbose output'],
+    ['-i, -c, --config <path>', 'Use a specific configuration file (default: auto-discover)'],
   ];
   const globalWidth = Math.max(...globalFlags.map(([f]) => f.length));
   for (const [f, d] of globalFlags) lines.push(`  ${chalk.yellow(f.padEnd(globalWidth))}  ${d}`);
@@ -151,11 +151,11 @@ function printExpandedHelp(): void {
   }
   lines.push('');
   lines.push(chalk.bold.cyan('Tag strategies'));
-  lines.push('  ' + chalk.yellow('timestamp')  + '  ' + chalk.blue('->') + ' ' + chalk.green('v') + chalk.cyan('YYYYMMDD-HHMMSS') + ' ' + chalk.gray('(UTC)'));
+  lines.push('  ' + chalk.yellow('timestamp') + '  ' + chalk.blue('->') + ' ' + chalk.green('v') + chalk.cyan('YYYYMMDD-HHMMSS') + ' ' + chalk.gray('(UTC)'));
   lines.push('  ' + chalk.yellow('git_commit') + ' ' + chalk.blue('->') + ' ' + chalk.green('v') + chalk.cyan('<short-commit-sha>') + ' ' + chalk.gray('(fallback to timestamp if not a git repo)'));
-  lines.push('  ' + chalk.yellow('git_tag')    + '    ' + chalk.blue('->') + ' ' + chalk.green('v') + chalk.cyan('<nearest-git-tag>') + ' ' + chalk.gray('(fallback to git_commit)'));
-  lines.push('  ' + chalk.yellow('semver')     + '     ' + chalk.blue('->') + ' ' + chalk.green('v') + chalk.cyan('<package.json version>') + ' ' + chalk.gray('(fallback to timestamp)'));
-  lines.push('  ' + chalk.yellow('manual')     + '     ' + chalk.blue('->') + ' ' + chalk.cyan('exact tag provided') + ' ' + chalk.gray('(no automatic v-prefixing)'));
+  lines.push('  ' + chalk.yellow('git_tag') + '    ' + chalk.blue('->') + ' ' + chalk.green('v') + chalk.cyan('<nearest-git-tag>') + ' ' + chalk.gray('(fallback to git_commit)'));
+  lines.push('  ' + chalk.yellow('semver') + '     ' + chalk.blue('->') + ' ' + chalk.green('v') + chalk.cyan('<package.json version>') + ' ' + chalk.gray('(fallback to timestamp)'));
+  lines.push('  ' + chalk.yellow('manual') + '     ' + chalk.blue('->') + ' ' + chalk.cyan('exact tag provided') + ' ' + chalk.gray('(no automatic v-prefixing)'));
   lines.push('');
   lines.push(chalk.bold.cyan('Config and env'));
   lines.push('  ' + chalk.bold('Config discovery:') + ' prefers ' + chalk.magenta('.registry-deploy.yaml') + ' in CWD; supports legacy names; also checks ' + chalk.magenta('~/.config/registry-deploy/config.yml'));
@@ -199,10 +199,13 @@ program
   .option('--build-arg <arg>', 'Build arguments (KEY=VALUE)', collectBuildArgs, [])
   .option('--no-cache', 'Don\'t use cache when building')
   .option('--verbose', 'Show detailed build output')
-  .action(async (options) => {
+  .action(async (options: { tag?: string; buildArg?: string[]; cache?: boolean; verbose?: boolean }) => {
     try {
       const config = await loadConfig(program.opts().config);
-      const command = new BuildCommand(options, config);
+      // Commander sets `cache` to false when `--no-cache` is provided.
+      // Normalize to BuildCommand's expected `noCache` boolean.
+      const normalized = { ...options, noCache: options.cache === false } as { tag?: string; buildArg?: string[]; verbose?: boolean; noCache?: boolean };
+      const command = new BuildCommand(normalized, config);
       await command.run();
     } catch (error) {
       Logger.error(`Build failed: ${error instanceof Error ? error.message : error}`);
@@ -296,7 +299,7 @@ async function loadConfig(configPath?: string): Promise<Config> {
     return configPath ? await Config.fromFile(configPath) : await Config.discover();
   } catch (error) {
     Logger.error(error instanceof Error ? error.message : String(error));
-  Logger.info('Run \'prim init\' to create .registry-deploy.yaml');
+    Logger.info('Run \'prim init\' to create .registry-deploy.yaml');
     process.exit(1);
   }
 }
@@ -329,7 +332,7 @@ program
 program.addHelpText('before', (context) => {
   // Only show for root program help
   if (context && // @ts-ignore commander types
-      context.command && context.command.name && context.command.name() === 'prim') {
+    context.command && context.command.name && context.command.name() === 'prim') {
     const header = chalk.bold.cyan('\nPrivate Registry Image Manager (prim)\n');
     const access = chalk.gray('Show this menu via any of: `prim`, `prim --help`, or `prim help`.');
     const docs = chalk.blue('📖 Documentation: https://github.com/B00M3000/Private-Registry-Image-Manager#readme');

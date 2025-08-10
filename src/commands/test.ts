@@ -15,7 +15,7 @@ interface TestOptions {
 }
 
 export class TestCommand {
-  constructor(private options: TestOptions, private config: Config) {}
+  constructor(private options: TestOptions, private config: Config) { }
 
   async run(): Promise<void> {
     const docker = new DockerClient();

@@ -12,7 +12,7 @@ interface BuildOptions {
 }
 
 export class BuildCommand {
-  constructor(private options: BuildOptions, private config: Config) {}
+  constructor(private options: BuildOptions, private config: Config) { }
 
   async run(): Promise<void> {
     const docker = new DockerClient();
@@ -52,7 +52,7 @@ export class BuildCommand {
         builtAt: new Date().toISOString(),
         size,
         dockerfile: this.config.project.dockerfile,
-  buildArgs: mergedBuildArgs
+        buildArgs: mergedBuildArgs
       });
     } catch (error) {
       Logger.debug(`Failed to track image: ${error instanceof Error ? error.message : error}`);
