@@ -35,12 +35,12 @@ export class StatusCommand {
     try {
       const storageInfo = await ImageTracker.getStorageInfo();
       Logger.info(`Storage: ${storageInfo.dir}`);
-      Logger.info(`Total tracked images: ${storageInfo.imageCount}`);
+      Logger.info(`All tracked images (across all repositories): ${storageInfo.imageCount}`);
 
       if (img) {
         const trackedImages = await ImageTracker.getTrackedImages(process.cwd(), img);
         if (trackedImages.length > 0) {
-          Logger.info(`Local project images: ${trackedImages.length}`);
+          Logger.info(`Tracked images images: ${trackedImages.length}`);
           if (this.options.verbose) {
             for (const tracked of trackedImages.slice(0, 10)) {
               const builtAt = new Date(tracked.builtAt).toLocaleString();

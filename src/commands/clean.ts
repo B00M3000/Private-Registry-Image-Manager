@@ -195,34 +195,25 @@ export class CleanCommand {
     Logger.info('\nSelect images to clean (use SPACE to toggle, Y to confirm, N to cancel):');
     Logger.info('Images are pre-selected based on your previous choices.');
 
-    const { selectedImages, shouldSave } = await inquirer.prompt([
+    const { selectedImages } = await inquirer.prompt([
       {
         type: 'checkbox',
         name: 'selectedImages',
         message: 'Images to clean:',
         choices,
         pageSize: Math.min(15, choices.length)
-      },
-      {
-        type: 'confirm',
-        name: 'shouldSave',
-        message: 'Save your selection preferences for future cleanups?',
-        default: true,
-        when: () => true // Always ask about saving
       }
     ]);
 
     // Save preferences if user chose to save
-    if (shouldSave) {
-      const newExcludedTags = imagesToClean
-        .filter(img => !selectedImages.find((selected: ImageToClean) => selected.tag === img.tag))
-        .map(img => img.tag);
+    const newExcludedTags = imagesToClean
+      .filter(img => !selectedImages.find((selected: ImageToClean) => selected.tag === img.tag))
+      .map(img => img.tag);
 
-      await CleanPreferencesManager.saveExcludedTags(projectPath, localRepo, newExcludedTags);
+    await CleanPreferencesManager.saveExcludedTags(projectPath, localRepo, newExcludedTags);
 
-      if (newExcludedTags.length > 0) {
-        Logger.debug(`Saved preferences to exclude ${newExcludedTags.length} images from future cleanups`);
-      }
+    if (newExcludedTags.length > 0) {
+      Logger.debug(`Saved preferences to exclude ${newExcludedTags.length} images from future cleanups`);
     }
 
     return selectedImages;
