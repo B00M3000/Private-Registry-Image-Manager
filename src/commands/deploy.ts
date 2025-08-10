@@ -120,11 +120,16 @@ export class DeployCommand {
 
     // Build if needed
     if (!this.options.skipBuild) {
+      // Ensure TAG is available to the Docker build as a build-arg
+      const mergedBuildArgs: Record<string, string> = {
+        ...this.config.docker.buildArgs,
+        TAG: tag!,
+      };
       await docker.buildImage(
         this.config.docker.buildContext,
         this.config.project.dockerfile,
         localImage,
-        this.config.docker.buildArgs,
+        mergedBuildArgs,
         false
       );
 
@@ -139,7 +144,7 @@ export class DeployCommand {
           builtAt: new Date().toISOString(),
           size,
           dockerfile: this.config.project.dockerfile,
-          buildArgs: this.config.docker.buildArgs
+          buildArgs: mergedBuildArgs
         });
       } catch (error) {
         Logger.debug(`Failed to track image: ${error instanceof Error ? error.message : error}`);

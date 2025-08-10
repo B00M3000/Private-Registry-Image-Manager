@@ -11,6 +11,7 @@ A user-friendly CLI to build and push Docker images to private registries with a
 - DNS pre-check for registry host
 - **Image tracking**: Built images are tracked in system storage (`/var/tmp/prim-images`) to allow reuse
 - **Interactive image selection**: When testing or deploying, you can choose from previously built images
+ - Automatically passes build-arg `TAG=<computedTag>` to `docker build` so your Dockerfile can reference the image tag during build
 
 ## Installation
 
@@ -36,6 +37,15 @@ Build image:
 
 ```bash
 prim build
+```
+
+Dockerfile usage for the injected TAG build-arg:
+
+```Dockerfile
+ARG TAG
+LABEL org.opencontainers.image.version=$TAG
+# or
+ENV APP_VERSION=$TAG
 ```
 
 Deploy image:

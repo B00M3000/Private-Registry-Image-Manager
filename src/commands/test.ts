@@ -80,11 +80,15 @@ export class TestCommand {
     const imageExists = await docker.imageExists(localImage);
     if (!imageExists) {
       Logger.info('Image not found locally; building first...');
+      const mergedBuildArgs: Record<string, string> = {
+        ...this.config.docker.buildArgs,
+        TAG: tag!,
+      };
       await docker.buildImage(
         this.config.docker.buildContext,
         this.config.project.dockerfile,
         localImage,
-        this.config.docker.buildArgs,
+        mergedBuildArgs,
         false
       );
 
@@ -99,7 +103,7 @@ export class TestCommand {
           builtAt: new Date().toISOString(),
           size,
           dockerfile: this.config.project.dockerfile,
-          buildArgs: this.config.docker.buildArgs
+          buildArgs: mergedBuildArgs
         });
       } catch (error) {
         Logger.debug(`Failed to track image: ${error instanceof Error ? error.message : error}`);
