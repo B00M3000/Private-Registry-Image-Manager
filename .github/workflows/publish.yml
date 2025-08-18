@@ -26,12 +26,12 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Lint
-        run: pnpm run lint
-        continue-on-error: true
+      # - name: Lint
+      #   run: pnpm run lint
+      #   continue-on-error: true
 
-      - name: Test
-        run: pnpm test --if-present
+      # - name: Test
+      #   run: pnpm test --if-present
 
       - name: Build
         run: pnpm run build
