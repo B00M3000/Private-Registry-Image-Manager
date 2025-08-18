@@ -7,6 +7,8 @@ import inquirer from 'inquirer';
 
 interface TestOptions {
   tag?: string;
+  context?: string;
+  dockerfile?: string;
   port?: string[]; // e.g., 8080:80
   env?: string[]; // e.g., KEY=VALUE
   detach?: boolean;
@@ -80,13 +82,18 @@ export class TestCommand {
     const imageExists = await docker.imageExists(localImage);
     if (!imageExists) {
       Logger.info('Image not found locally; building first...');
+      
+      // Resolve build context and dockerfile with CLI overrides
+      const buildContext = this.options.context || this.config.docker.buildContext;
+      const dockerfile = this.options.dockerfile || this.config.project.dockerfile;
+      
       const mergedBuildArgs: Record<string, string> = {
         ...this.config.docker.buildArgs,
         TAG: tag!,
       };
       await docker.buildImage(
-        this.config.docker.buildContext,
-        this.config.project.dockerfile,
+        buildContext,
+        dockerfile,
         localImage,
         mergedBuildArgs,
         false
@@ -94,6 +101,7 @@ export class TestCommand {
 
       // Track the newly built image
       try {
+        const dockerfile = this.options.dockerfile || this.config.project.dockerfile;
         const size = await docker.getImageSize(localImage);
         await ImageTracker.trackImage({
           imageName: this.config.docker.localImageName,
@@ -102,7 +110,7 @@ export class TestCommand {
           projectPath: process.cwd(),
           builtAt: new Date().toISOString(),
           size,
-          dockerfile: this.config.project.dockerfile,
+          dockerfile: dockerfile,
           buildArgs: mergedBuildArgs
         });
       } catch (error) {

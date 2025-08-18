@@ -6,6 +6,8 @@ import { ImageTracker } from '../utils/image-tracker';
 
 interface BuildOptions {
   tag?: string;
+  context?: string;
+  dockerfile?: string;
   buildArg?: string[];
   noCache?: boolean;
   verbose?: boolean;
@@ -21,6 +23,10 @@ export class BuildCommand {
     const tag = await this.resolveTag();
     const localImage = `${this.config.docker.localImageName}:${tag}`;
 
+    // Resolve build context and dockerfile with CLI overrides
+    const buildContext = this.options.context || this.config.docker.buildContext;
+    const dockerfile = this.options.dockerfile || this.config.project.dockerfile;
+
     const buildArgs = this.parseBuildArgs(this.options.buildArg || []);
     // Always inject the computed tag as build-arg so Dockerfile can use ARG TAG
     const mergedBuildArgs: Record<string, string> = {
@@ -29,13 +35,13 @@ export class BuildCommand {
       TAG: tag,
     };
     Logger.header('Build');
-    Logger.step(`Context: ${this.config.docker.buildContext}`);
-    if (this.config.project.dockerfile) Logger.step(`Dockerfile: ${this.config.project.dockerfile}`);
+    Logger.step(`Context: ${buildContext}`);
+    if (dockerfile) Logger.step(`Dockerfile: ${dockerfile}`);
     Logger.step(`Image: ${localImage}`);
 
     await docker.buildImage(
-      this.config.docker.buildContext,
-      this.config.project.dockerfile,
+      buildContext,
+      dockerfile,
       localImage,
       mergedBuildArgs,
       !!this.options.noCache
@@ -51,7 +57,7 @@ export class BuildCommand {
         projectPath: process.cwd(),
         builtAt: new Date().toISOString(),
         size,
-        dockerfile: this.config.project.dockerfile,
+        dockerfile: dockerfile,
         buildArgs: mergedBuildArgs
       });
     } catch (error) {

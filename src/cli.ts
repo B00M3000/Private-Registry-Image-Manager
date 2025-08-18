@@ -196,15 +196,20 @@ program
   .command('build')
   .description(chalk.green('Build Docker image'))
   .option('-t, --tag <tag>', 'Custom tag for the built image')
+  .option('-c, --context <path>', 'Build context path (overrides config)')
+  .option('-f, --dockerfile <path>', 'Path to Dockerfile (overrides config)')
   .option('--build-arg <arg>', 'Build arguments (KEY=VALUE)', collectBuildArgs, [])
   .option('--no-cache', 'Don\'t use cache when building')
   .option('--verbose', 'Show detailed build output')
-  .action(async (options: { tag?: string; buildArg?: string[]; cache?: boolean; verbose?: boolean }) => {
+  .action(async (options: { tag?: string; context?: string; dockerfile?: string; buildArg?: string[]; cache?: boolean; verbose?: boolean }) => {
     try {
       const config = await loadConfig(program.opts().config);
       // Commander sets `cache` to false when `--no-cache` is provided.
       // Normalize to BuildCommand's expected `noCache` boolean.
-      const normalized = { ...options, noCache: options.cache === false } as { tag?: string; buildArg?: string[]; verbose?: boolean; noCache?: boolean };
+      const normalized = { 
+        ...options, 
+        noCache: options.cache === false 
+      } as { tag?: string; context?: string; dockerfile?: string; buildArg?: string[]; verbose?: boolean; noCache?: boolean };
       const command = new BuildCommand(normalized, config);
       await command.run();
     } catch (error) {
@@ -218,9 +223,11 @@ program
   .command('deploy')
   .description(chalk.green('Deploy to registry'))
   .option('-t, --tag <tag>', 'Version tag to use (overrides config strategy)')
+  .option('-c, --context <path>', 'Build context path (overrides config, used when not skipping build)')
+  .option('-f, --dockerfile <path>', 'Path to Dockerfile (overrides config, used when not skipping build)')
   .option('--skip-build', 'Skip building and deploy existing local image')
   .option('--skip-dns-check', 'Skip DNS check')
-  .option('-f, --force', 'Force deployment without confirmation')
+  .option('--force', 'Force deployment without confirmation')
   .option('--no-latest', 'Don\'t push latest tag')
   .option('--skip-auth', 'Skip authentication (assume already logged in)')
   .action(async (options) => {
@@ -256,6 +263,8 @@ program
   .command('test')
   .description(chalk.green('Run the built image locally for testing'))
   .option('-t, --tag <tag>', 'Tag to test (defaults to generated)')
+  .option('-c, --context <path>', 'Build context path (overrides config, used when building)')
+  .option('-f, --dockerfile <path>', 'Path to Dockerfile (overrides config, used when building)')
   .option('-p, --port <port>', 'Port mapping (HOST:CONTAINER)', collectBuildArgs, [])
   .option('-e, --env <env>', 'Env var (KEY=VALUE)', collectBuildArgs, [])
   .option('-n, --name <name>', 'Container name')

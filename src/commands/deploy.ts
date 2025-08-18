@@ -8,6 +8,8 @@ import { ImageTracker } from '../utils/image-tracker';
 
 interface DeployOptions {
   tag?: string;
+  context?: string;
+  dockerfile?: string;
   skipBuild?: boolean;
   skipDnsCheck?: boolean;
   force?: boolean;
@@ -120,14 +122,18 @@ export class DeployCommand {
 
     // Build if needed
     if (!this.options.skipBuild) {
+      // Resolve build context and dockerfile with CLI overrides
+      const buildContext = this.options.context || this.config.docker.buildContext;
+      const dockerfile = this.options.dockerfile || this.config.project.dockerfile;
+      
       // Ensure TAG is available to the Docker build as a build-arg
       const mergedBuildArgs: Record<string, string> = {
         ...this.config.docker.buildArgs,
         TAG: tag!,
       };
       await docker.buildImage(
-        this.config.docker.buildContext,
-        this.config.project.dockerfile,
+        buildContext,
+        dockerfile,
         localImage,
         mergedBuildArgs,
         false
@@ -135,6 +141,7 @@ export class DeployCommand {
 
       // Track the newly built image
       try {
+        const dockerfile = this.options.dockerfile || this.config.project.dockerfile;
         const size = await docker.getImageSize(localImage);
         await ImageTracker.trackImage({
           imageName: this.config.docker.localImageName,
@@ -143,7 +150,7 @@ export class DeployCommand {
           projectPath: process.cwd(),
           builtAt: new Date().toISOString(),
           size,
-          dockerfile: this.config.project.dockerfile,
+          dockerfile: dockerfile,
           buildArgs: mergedBuildArgs
         });
       } catch (error) {

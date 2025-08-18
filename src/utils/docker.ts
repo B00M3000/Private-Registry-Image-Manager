@@ -1,6 +1,8 @@
 import { spawn, ChildProcess } from 'child_process';
 import which from 'which';
 import ora from 'ora';
+import * as fs from 'fs';
+import * as path from 'path';
 import { Logger } from './logger';
 
 export class DockerClient {
@@ -32,6 +34,9 @@ export class DockerClient {
   ): Promise<void> {
     Logger.info(`Building Docker image: ${imageName || 'unnamed'}`);
 
+    // Validate build context
+    await this.validateBuildContext(context);
+
     const args = ['build'];
 
     if (imageName) {
@@ -39,6 +44,8 @@ export class DockerClient {
     }
 
     if (dockerfile) {
+      // Validate dockerfile path
+      await this.validateDockerfile(dockerfile, context);
       args.push('-f', dockerfile);
     }
 
@@ -327,6 +334,126 @@ export class DockerClient {
       return allImages;
     } catch {
       return [];
+    }
+  }
+
+  /**
+   * Validates that the build context directory exists and is readable
+   */
+  private async validateBuildContext(contextPath: string): Promise<void> {
+    try {
+      const stats = await fs.promises.stat(contextPath);
+      if (!stats.isDirectory()) {
+        throw new Error(`Build context path is not a directory: ${contextPath}`);
+      }
+
+      // Check if we can read the directory
+      await fs.promises.access(contextPath, fs.constants.R_OK);
+      Logger.debug(`Build context validated: ${contextPath}`);
+      
+      // Log .dockerignore info if it exists
+      const dockerignorePath = path.join(contextPath, '.dockerignore');
+      try {
+        await fs.promises.access(dockerignorePath);
+        Logger.debug(`Found .dockerignore in build context: ${dockerignorePath}`);
+      } catch {
+        // .dockerignore doesn't exist, which is fine
+      }
+    } catch (error) {
+      throw new Error(`Invalid build context: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Validates that the Dockerfile exists and is readable
+   */
+  private async validateDockerfile(dockerfilePath: string, contextPath: string): Promise<void> {
+    try {
+      let fullDockerfilePath: string;
+      
+      if (path.isAbsolute(dockerfilePath)) {
+        fullDockerfilePath = dockerfilePath;
+      } else {
+        // If relative path, check both relative to current directory and relative to context
+        try {
+          await fs.promises.access(dockerfilePath, fs.constants.R_OK);
+          fullDockerfilePath = dockerfilePath;
+        } catch {
+          // Try relative to context
+          fullDockerfilePath = path.join(contextPath, dockerfilePath);
+        }
+      }
+
+      const stats = await fs.promises.stat(fullDockerfilePath);
+      if (!stats.isFile()) {
+        throw new Error(`Dockerfile path is not a file: ${fullDockerfilePath}`);
+      }
+
+      // Check if we can read the file
+      await fs.promises.access(fullDockerfilePath, fs.constants.R_OK);
+      Logger.debug(`Dockerfile validated: ${fullDockerfilePath}`);
+    } catch (error) {
+      throw new Error(`Invalid Dockerfile: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Gets build context information including size and file count
+   */
+  async getBuildContextInfo(contextPath: string): Promise<{
+    path: string;
+    size: string;
+    fileCount: number;
+    hasDockerignore: boolean;
+  }> {
+    try {
+      await this.validateBuildContext(contextPath);
+      
+      // Get directory size and file count (simplified approach)
+      const files = await this.countFilesRecursively(contextPath);
+      const dockerignorePath = path.join(contextPath, '.dockerignore');
+      const hasDockerignore = await fs.promises.access(dockerignorePath).then(() => true).catch(() => false);
+      
+      return {
+        path: path.resolve(contextPath),
+        size: 'N/A', // Size calculation can be expensive, skipping for now
+        fileCount: files,
+        hasDockerignore
+      };
+    } catch (error) {
+      throw new Error(`Failed to get build context info: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  /**
+   * Recursively counts files in a directory (with basic filtering)
+   */
+  private async countFilesRecursively(dirPath: string, maxDepth = 10, currentDepth = 0): Promise<number> {
+    if (currentDepth >= maxDepth) return 0;
+    
+    try {
+      const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
+      let count = 0;
+      
+      for (const entry of entries) {
+        if (entry.name.startsWith('.git') || entry.name === 'node_modules') {
+          continue; // Skip common large directories
+        }
+        
+        if (entry.isFile()) {
+          count++;
+        } else if (entry.isDirectory()) {
+          count += await this.countFilesRecursively(
+            path.join(dirPath, entry.name), 
+            maxDepth, 
+            currentDepth + 1
+          );
+        }
+      }
+      
+      return count;
+    } catch {
+      return 0;
     }
   }
 }

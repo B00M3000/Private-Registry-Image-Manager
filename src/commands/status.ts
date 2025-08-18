@@ -24,11 +24,29 @@ export class StatusCommand {
       Logger.warning('Docker not available');
     }
 
-  Logger.header('Config');
-  const img = this.config.project.imageName || this.config.project.name;
-  Logger.step(`Image: ${img}`);
+    Logger.header('Config');
+    const img = this.config.project.imageName || this.config.project.name;
+    Logger.step(`Image: ${img}`);
     Logger.step(`Registry: ${this.config.registry.url}/${this.config.registry.repository}`);
     Logger.step(`Tag strategy: ${this.config.deployment.tagStrategy}`);
+    Logger.step(`Build context: ${this.config.docker.buildContext}`);
+    if (this.config.project.dockerfile) {
+      Logger.step(`Dockerfile: ${this.config.project.dockerfile}`);
+    }
+
+    // Show build context information
+    Logger.header('Build Context');
+    try {
+      const contextInfo = await docker.getBuildContextInfo(this.config.docker.buildContext);
+      Logger.step(`Path: ${contextInfo.path}`);
+      Logger.step(`Files: ${contextInfo.fileCount} (estimated)`);
+      Logger.step(`Dockerignore: ${contextInfo.hasDockerignore ? 'Yes' : 'No'}`);
+      if (this.options.verbose && contextInfo.hasDockerignore) {
+        Logger.info('Note: File count may be reduced by .dockerignore rules');
+      }
+    } catch (error) {
+      Logger.warning(`Build context check failed: ${error instanceof Error ? error.message : error}`);
+    }
 
     // Show tracked images
     Logger.header('Tracked Images');

@@ -70,13 +70,25 @@ registry:
 docker:
   localImageName: my-app      # local image name used during build
   buildArgs: {}
-  buildContext: .
+  buildContext: .             # build context path (relative to project root)
 deployment:
   tagStrategy: git_commit     # timestamp | git_commit | git_tag | manual | semver
   pushLatest: true            # also push :latest alongside the generated tag
   dnsCheck: true              # verify registry hostname resolves before pushing (safety check)
   autoCleanup: false          # remove local images after deploy
 ```
+
+### Build Context Support
+
+The tool provides comprehensive build context support:
+
+- **Configuration-based**: Set `docker.buildContext` in your config file
+- **CLI overrides**: Use `--context` and `--dockerfile` options to override config
+- **Validation**: Build context and Dockerfile paths are validated before building
+- **Dockerignore support**: Automatically detects and respects `.dockerignore` files
+- **Status information**: Use `prim status` to see build context details
+
+Build context features are available in `build`, `deploy`, and `test` commands.
 
 Tips:
 - Set credentials via env vars if not in config: `REGISTRY_USERNAME` and `REGISTRY_PASSWORD`.
@@ -87,12 +99,12 @@ Tips:
 
 ## Commands
 
-- init: create a new config file interactively or with defaults.
-- build: build the Docker image using your config and generated tag.
-- deploy: tag and push to the configured registry, optionally pushing `latest`.
-- status: show config and Docker environment info, optional registry DNS check.
-- test: run the built image locally with ports/env settings before deploying. Shows previously built images to choose from.
-- clean: remove local containers and images for this project, optionally for a specific tag. Features interactive multi-select with persistent preferences to exclude specific images from cleanup.
+- **init**: create a new config file interactively or with defaults.
+- **build**: build the Docker image using your config and generated tag. Supports `--context` and `--dockerfile` overrides.
+- **deploy**: tag and push to the configured registry, optionally pushing `latest`. Supports build context overrides when not skipping build.
+- **status**: show config and Docker environment info, including build context details and optional registry DNS check.
+- **test**: run the built image locally with ports/env settings before deploying. Shows previously built images to choose from. Supports build context overrides when building.
+- **clean**: remove local containers and images for this project, optionally for a specific tag. Features interactive multi-select with persistent preferences to exclude specific images from cleanup.
 
 ### Examples
 
@@ -100,6 +112,18 @@ Build with custom build args and no cache:
 
 ```bash
 prim build --build-arg COMMIT_SHA=$(git rev-parse --short HEAD) --no-cache
+```
+
+Build with custom build context and dockerfile:
+
+```bash
+prim build --context ./backend --dockerfile ./backend/prod.Dockerfile
+```
+
+Deploy with custom build context (when not skipping build):
+
+```bash
+prim deploy --context ./backend --dockerfile ./backend/Dockerfile
 ```
 
 Deploy skipping build and without pushing latest:
@@ -112,6 +136,12 @@ Run locally with ports and env vars:
 
 ```bash
 prim test -p 8080:80 -e NODE_ENV=production -n my-test
+```
+
+Test with custom build context (if image needs to be built):
+
+```bash
+prim test --context ./services/api -p 3000:3000
 ```
 
 Cleanup all local tags/containers for this image:
