@@ -14,7 +14,7 @@ export class InitCommand {
   constructor(private options: InitOptions) {}
 
   async run(): Promise<void> {
-    Logger.info('Initializing container-deploy configuration');
+    Logger.info('Initializing registry-deploy configuration');
 
     // Check if file exists
     try {

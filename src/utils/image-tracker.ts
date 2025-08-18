@@ -20,17 +20,8 @@ export class ImageTracker {
     if (process.platform === 'win32') {
       return path.join(os.tmpdir(), 'prim-images');
     }
-    // For Linux/Unix systems, use /var/tmp (survives reboots) or /tmp
-    // /var/tmp is preferred for data that should persist between reboots
-    const varTmpDir = '/var/tmp/prim-images';
-    const tmpDir = path.join(os.tmpdir(), 'prim-images');
-
-    // Try to use /var/tmp first, fallback to /tmp
-    try {
-      return varTmpDir;
-    } catch {
-      return tmpDir;
-    }
+    // For Linux/Unix systems, prefer /var/tmp (survives reboots) over /tmp
+    return '/var/tmp/prim-images';
   }
 
   private static getTrackingFile(): string {

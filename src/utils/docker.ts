@@ -90,7 +90,26 @@ export class DockerClient {
       Logger.success(`Pushed image: ${imageName}`);
     } catch (error) {
       spinner.fail('Push failed');
-      throw error;
+      
+      // Enhanced error display for registry push issues
+      const errorMessage = error instanceof Error ? error.message : String(error);
+      
+      if (errorMessage.includes('denied') || errorMessage.includes('unauthorized')) {
+        Logger.error('Registry authentication failed. Please check your credentials and try logging in again.');
+        Logger.info('You can login using: docker login <registry-url>');
+      } else if (errorMessage.includes('network') || errorMessage.includes('timeout')) {
+        Logger.error('Network error occurred while pushing to registry. Please check your connection and try again.');
+      } else if (errorMessage.includes('no such host') || errorMessage.includes('not found')) {
+        Logger.error('Registry endpoint not found. Please verify the registry URL is correct.');
+      } else if (errorMessage.includes('insufficient_scope') || errorMessage.includes('forbidden')) {
+        Logger.error('Insufficient permissions to push to this repository. Please check your access rights.');
+      } else if (errorMessage.includes('manifest') && errorMessage.includes('invalid')) {
+        Logger.error('Invalid image manifest. The image may be corrupted or incompatible with the registry.');
+      } else {
+        Logger.error(`Push failed: ${errorMessage}`);
+      }
+      
+      throw new Error(`Failed to push image to registry: ${errorMessage}`);
     }
   }
 
@@ -374,13 +393,14 @@ export class DockerClient {
       if (path.isAbsolute(dockerfilePath)) {
         fullDockerfilePath = dockerfilePath;
       } else {
-        // If relative path, check both relative to current directory and relative to context
+        // If relative path, prioritize context-relative since Docker build uses context as working dir
+        const contextRelativePath = path.join(contextPath, dockerfilePath);
         try {
-          await fs.promises.access(dockerfilePath, fs.constants.R_OK);
-          fullDockerfilePath = dockerfilePath;
+          await fs.promises.access(contextRelativePath, fs.constants.R_OK);
+          fullDockerfilePath = contextRelativePath;
         } catch {
-          // Try relative to context
-          fullDockerfilePath = path.join(contextPath, dockerfilePath);
+          // Fallback to current directory relative
+          fullDockerfilePath = dockerfilePath;
         }
       }
 

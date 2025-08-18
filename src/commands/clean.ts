@@ -71,10 +71,11 @@ export class CleanCommand {
   }
 
   private async cleanSpecificTag(docker: DockerClient, projectPath: string, localRepo: string, registryRepo: string): Promise<void> {
-    const normalizedTag = this.options.tag!.startsWith('v') ? this.options.tag! : `v${this.options.tag!}`;
+    // Use the tag as-is, don't force v-prefix since user might want exact control
+    const targetTag = this.options.tag!;
     const targets = [
-      `${localRepo}:${normalizedTag}`,
-      `${registryRepo}:${normalizedTag}`
+      `${localRepo}:${targetTag}`,
+      `${registryRepo}:${targetTag}`
     ];
 
     const existingTargets: string[] = [];
@@ -85,7 +86,7 @@ export class CleanCommand {
     }
 
     if (existingTargets.length === 0) {
-      Logger.info(`No images found with tag: ${normalizedTag}`);
+      Logger.info(`No images found with tag: ${targetTag}`);
       return;
     }
 
@@ -101,8 +102,8 @@ export class CleanCommand {
     }
 
     // Clean up tracking
-    await ImageTracker.removeTrackedImage(projectPath, localRepo, normalizedTag);
-    Logger.success(`Cleanup complete for tag: ${normalizedTag}`);
+    await ImageTracker.removeTrackedImage(projectPath, localRepo, targetTag);
+    Logger.success(`Cleanup complete for tag: ${targetTag}`);
   }
 
   private async gatherAllRelevantImages(

@@ -123,7 +123,7 @@ export class Config {
       // Legacy global config doesn't exist
     }
 
-  throw new Error('No configuration file found. Run \'container-deploy init\' to create .registry-deploy.yaml.');
+  throw new Error('No configuration file found. Run \'prim init\' to create .registry-deploy.yaml.');
   }
 
   static async fromFile(filePath: string): Promise<Config> {
