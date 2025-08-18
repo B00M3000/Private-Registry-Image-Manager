@@ -82,11 +82,11 @@ export class TestCommand {
     const imageExists = await docker.imageExists(localImage);
     if (!imageExists) {
       Logger.info('Image not found locally; building first...');
-      
+
       // Resolve build context and dockerfile with CLI overrides
       const buildContext = this.options.context || this.config.docker.buildContext;
       const dockerfile = this.options.dockerfile || this.config.project.dockerfile;
-      
+
       const mergedBuildArgs: Record<string, string> = {
         ...this.config.docker.buildArgs,
         TAG: tag!,

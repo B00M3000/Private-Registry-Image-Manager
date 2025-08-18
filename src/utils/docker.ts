@@ -350,7 +350,7 @@ export class DockerClient {
       // Check if we can read the directory
       await fs.promises.access(contextPath, fs.constants.R_OK);
       Logger.debug(`Build context validated: ${contextPath}`);
-      
+
       // Log .dockerignore info if it exists
       const dockerignorePath = path.join(contextPath, '.dockerignore');
       try {
@@ -370,7 +370,7 @@ export class DockerClient {
   private async validateDockerfile(dockerfilePath: string, contextPath: string): Promise<void> {
     try {
       let fullDockerfilePath: string;
-      
+
       if (path.isAbsolute(dockerfilePath)) {
         fullDockerfilePath = dockerfilePath;
       } else {
@@ -408,12 +408,12 @@ export class DockerClient {
   }> {
     try {
       await this.validateBuildContext(contextPath);
-      
+
       // Get directory size and file count (simplified approach)
       const files = await this.countFilesRecursively(contextPath);
       const dockerignorePath = path.join(contextPath, '.dockerignore');
       const hasDockerignore = await fs.promises.access(dockerignorePath).then(() => true).catch(() => false);
-      
+
       return {
         path: path.resolve(contextPath),
         size: 'N/A', // Size calculation can be expensive, skipping for now
@@ -430,27 +430,27 @@ export class DockerClient {
    */
   private async countFilesRecursively(dirPath: string, maxDepth = 10, currentDepth = 0): Promise<number> {
     if (currentDepth >= maxDepth) return 0;
-    
+
     try {
       const entries = await fs.promises.readdir(dirPath, { withFileTypes: true });
       let count = 0;
-      
+
       for (const entry of entries) {
         if (entry.name.startsWith('.git') || entry.name === 'node_modules') {
           continue; // Skip common large directories
         }
-        
+
         if (entry.isFile()) {
           count++;
         } else if (entry.isDirectory()) {
           count += await this.countFilesRecursively(
-            path.join(dirPath, entry.name), 
-            maxDepth, 
+            path.join(dirPath, entry.name),
+            maxDepth,
             currentDepth + 1
           );
         }
       }
-      
+
       return count;
     } catch {
       return 0;

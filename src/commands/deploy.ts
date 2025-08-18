@@ -15,6 +15,7 @@ interface DeployOptions {
   force?: boolean;
   latest?: boolean; // commander --no-latest will flip this to false
   skipAuth?: boolean;
+  forceBuild?: boolean; // Force build new image instead of choosing from menu
 }
 
 export class DeployCommand {
@@ -41,17 +42,6 @@ export class DeployCommand {
       }
     }
 
-    // Confirm if not forced
-    if (!this.options.force) {
-      const { cont } = await inquirer.prompt([
-        { type: 'confirm', name: 'cont', message: 'Proceed with deployment?', default: true }
-      ]);
-      if (!cont) {
-        Logger.info('Deployment canceled');
-        return;
-      }
-    }
-
     // Resolve tag
     let tag = this.options.tag;
 
@@ -62,7 +52,7 @@ export class DeployCommand {
         this.config.docker.localImageName
       );
 
-      if (trackedImages.length > 0 && !this.options.force) {
+      if (trackedImages.length > 0 && !this.options.force && !this.options.forceBuild) {
         Logger.info('Found previously built images:');
         const choices = trackedImages.slice(0, 5).map((img) => ({
           name: `${img.tag} (built ${new Date(img.builtAt).toLocaleString()}${img.size ? `, ${img.size}` : ''})`,
@@ -125,7 +115,7 @@ export class DeployCommand {
       // Resolve build context and dockerfile with CLI overrides
       const buildContext = this.options.context || this.config.docker.buildContext;
       const dockerfile = this.options.dockerfile || this.config.project.dockerfile;
-      
+
       // Ensure TAG is available to the Docker build as a build-arg
       const mergedBuildArgs: Record<string, string> = {
         ...this.config.docker.buildArgs,

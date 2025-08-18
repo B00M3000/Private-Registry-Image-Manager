@@ -35,7 +35,7 @@ function printCondensedHelp(): void {
   const items: Array<{ desc: string; cmd: string; opts?: string }> = [
     { desc: 'Initialize configuration', cmd: 'init' },
     { desc: 'Build Docker image', cmd: 'build', opts: '[--tag|-t] [--build-arg] [--no-cache]' },
-    { desc: 'Deploy to registry', cmd: 'deploy', opts: '[--tag|-t] [--skip-build] [--no-latest] [--force|-f]' },
+    { desc: 'Deploy to registry', cmd: 'deploy', opts: '[--tag|-t] [--skip-build] [--no-latest] [--force|-f] [--force-build]' },
     { desc: 'Show config/env', cmd: 'status', opts: '[--check-registry] [--verbose|-v]' },
     { desc: 'Run locally', cmd: 'test', opts: '[--tag|-t] [-p HOST:PORT] [-e KEY=VALUE] [--no-detach]' },
     { desc: 'Interactive cleanup', cmd: 'clean', opts: '[--tag|-t] [--yes|-y]' },
@@ -88,6 +88,7 @@ function printExpandedHelp(): void {
         ['    --skip-build', 'Skip building and use existing local image'],
         ['    --skip-dns-check', 'Skip DNS check (overrides config)'],
         ['-f, --force', 'Skip confirmation prompts'],
+        ['    --force-build', 'Force build new image instead of choosing from menu (useful for CI/CD)'],
         ['    --no-latest', 'Do not push ' + chalk.cyan(':latest') + ' tag'],
         ['    --skip-auth', 'Do not login; assume already logged in'],
       ],
@@ -206,9 +207,9 @@ program
       const config = await loadConfig(program.opts().config);
       // Commander sets `cache` to false when `--no-cache` is provided.
       // Normalize to BuildCommand's expected `noCache` boolean.
-      const normalized = { 
-        ...options, 
-        noCache: options.cache === false 
+      const normalized = {
+        ...options,
+        noCache: options.cache === false
       } as { tag?: string; context?: string; dockerfile?: string; buildArg?: string[]; verbose?: boolean; noCache?: boolean };
       const command = new BuildCommand(normalized, config);
       await command.run();
@@ -228,6 +229,7 @@ program
   .option('--skip-build', 'Skip building and deploy existing local image')
   .option('--skip-dns-check', 'Skip DNS check')
   .option('--force', 'Force deployment without confirmation')
+  .option('--force-build', 'Force build new image instead of choosing from menu (useful for CI/CD)')
   .option('--no-latest', 'Don\'t push latest tag')
   .option('--skip-auth', 'Skip authentication (assume already logged in)')
   .action(async (options) => {
